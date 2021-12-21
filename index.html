@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Music Player</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css"
+		integrity="sha512-HK5fgLBL+xu6dm/Ii3z4xhlSUyZgTT9tuc/hSrtw6uzJOvgRr2a9jyxxT1ely+B+xFAmJKVSTbpM/CuL7qxO8w=="
+		crossorigin="anonymous" />
+	<link rel="preconnect" href="https://fonts.gstatic.com">
+	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="./assets/css/style.css">
+</head>
+
+<body>
+	<div class="player">
+		<div class="dashboard">
+			<header class="header">
+				<h4>Now playing:</h4>
+				<h2>String 57th & 9th</h2>
+			</header>
+
+			<div class="cd">
+				<div class="cd__thumb" style="background-image: url('./assets/img/dancing_with_your_ghost.jpg')"></div>
+			</div>
+
+			<div class="control">
+				<div class="btn btn-repeat">
+					<i class="fas fa-redo"></i>
+				</div>
+				<div class="btn btn-prev">
+					<i class="fas fa-step-backward"></i>
+				</div>
+				<div class="btn btn--active btn-toggle-play">
+					<i class="fas fa-play icon-play"></i>
+					<i class="fas fa-pause icon-pause"></i>
+				</div>
+				<div class="btn btn-next">
+					<i class="fas fa-step-forward"></i>
+				</div>
+				<div class="btn btn-random">
+					<i class="fas fa-random"></i>
+				</div>
+			</div>
+
+			<input type="range" id="progress" class="progress" value="0" step="1" min="0" max="100">
+
+			<audio src="" id="audio"></audio>
+		</div>
+
+		<div class="playlist">
+			<div class="song">
+				<div class="song__thumb" style="background-image: url('./assets/img/dancing_with_your_ghost.jpg')">
+				</div>
+				<div class="song__body">
+					<h3 class="song__name">Music name</h3>
+					<div class="song__author">Singer</div>
+				</div>
+				<div class="song__option">
+					<i class="fas fa-ellipsis-h"></i>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script>
+		const $ = document.querySelector.bind(document)
+		const $$ = document.querySelectorAll.bind(document)
+
+		const PLAYER_CONFIG_KEY = 'MY_PLAYER' 
+
+		let cdAnimated
+
+		const player = $('.player')
+		const playlist = $('.playlist')
+		const headerDashboard = $('.header h2')
+		const cd = $('.cd')
+		const cdThumb = $('.cd__thumb')
+		const audio = $('#audio')
+		const btnPlay = $('.btn-toggle-play')
+		const btnNext = $('.btn-next')
+		const btnPrev = $('.btn-prev')
+		const btnRandom = $('.btn-random')
+		const btnRepeat = $('.btn-repeat')
+		const progressBar = $('.progress')
+
+		const app = {
+			currentIndex: 0,
+			isPlaying: false,
+			isRandom: false,
+			isRepeat: false,
+			randomSongList: [],
+			config: JSON.parse(localStorage.getItem(PLAYER_CONFIG_KEY)) ?? {},
+			songs: [
+				{
+					name: 'Calling My Phone',
+					singer: 'Lil TJay',
+					image: './assets/img/calling_my_phone.jpg',
+					src: './assets/music/CallingMyPhone.mp3',
+				},
+				{
+					name: 'Dancing With Your Ghost',
+					singer: 'Sasha Alex Sloan',
+					image: './assets/img/dancing_with_your_ghost.jpg',
+					src: './assets/music/DancingWithYourGhost.mp3',
+				},
+				{
+					name: 'Dusk Til Dawn',
+					singer: 'Zayn ft Sia',
+					image: './assets/img/dusk_till_dawn.jpg',
+					src: './assets/music/DuskTillDawn.mp3',
+				},
+				{
+					name: 'Havana',
+					singer: 'Camila Cabello',
+					image: './assets/img/havana.png',
+					src: './assets/music/Havana.mp3',
+				},
+				{
+					name: 'Let Fall In Love For The Night',
+					singer: 'Finneas',
+					image: './assets/img/let_fall_in_love.jpg',
+					src: './assets/music/LetFallInLove.mp3',
+				},
+				{
+					name: 'My Oh My',
+					singer: 'Camila Cabello',
+					image: './assets/img/my_oh_my.jpg',
+					src: './assets/music/MyOhMy.mp3',
+				},
+				{
+					name: 'Ride It',
+					singer: 'Regard',
+					image: './assets/img/ride_it.jpg',
+					src: './assets/music/RideIt.mp3',
+				},
+				{
+					name: 'Roses',
+					singer: 'The Chainsmokers',
+					image: './assets/img/roses.jpg',
+					src: './assets/music/Roses.mp3',
+				},
+				{
+					name: 'Savage Love',
+					singer: 'Aespa',
+					image: './assets/img/savage_love.jpg',
+					src: './assets/music/SavageLove.mp3',
+				},
+				{
+					name: 'Sweet Dream',
+					singer: 'Alessia Cara',
+					image: './assets/img/sweet_dream.jpg',
+					src: './assets/music/SweetDream.mp3',
+				},
+				{
+					name: 'Tomboy',
+					singer: 'Destiny Rogers',
+					image: './assets/img/tomboy.jpg',
+					src: './assets/music/Tomboy.mp3',
+				}
+			],
+			render() {
+				const html = this.songs.map((song, index) => {
+					return `
+						<div
+							class="song ${index === this.currentIndex ? 'song--active' : ''}"
+							data-id=${index}
+						>
+							<div class="song__thumb" style="background-image: url('${song.image}')">
+							</div>
+							<div class="song__body">
+								<h3 class="song__name">${song.name}</h3>
+								<div class="song__author">${song.singer}</div>
+							</div>
+							<div class="song__option">
+								<i class="fas fa-ellipsis-h"></i>
+							</div>
+						</div>
+					`
+				})
+				.join('')
+				playlist.innerHTML = html
+			},
+			setConfig(key, value) {
+				this.config[key] = value
+				localStorage.setItem(PLAYER_CONFIG_KEY, JSON.stringify(this.config))
+			},
+			loadConfig() {
+				this.isRandom = this.config.isRandom
+				this.isRepeat = this.config.isRepeat
+
+				btnRandom.classList.toggle('btn--active', this.isRandom)
+				btnRepeat.classList.toggle('btn--active', this.isRepeat)
+			},
+			defineProperties() {
+				Object.defineProperty(this, 'currentSong', {
+					get() {
+						return this.songs[this.currentIndex]
+					}
+				})
+			},
+			loadCurrentSong() {
+				headerDashboard.innerText = this.currentSong.name
+				cdThumb.style.backgroundImage = `url('${this.currentSong.image}')`
+				audio.src = this.currentSong.src
+
+				$('.song--active').classList.remove('song--active')
+				$$('.song')[this.currentIndex].classList.add('song--active')
+			},
+			nextSong() {
+				this.currentIndex++
+				if (this.currentIndex >= this.songs.length)
+					this.currentIndex = 0
+				this.loadCurrentSong()
+			},
+			prevSong() {
+				this.currentIndex--
+				if (this.currentIndex < 0)
+					this.currentIndex = this.songs.length - 1
+				this.loadCurrentSong()
+			},
+			randomSong() {
+				let randomIndex = Math.floor(Math.random() * this.songs.length)
+
+				if (this.randomSongList.length === this.songs.length) {
+					this.randomSongList = []
+				}
+				
+				while (randomIndex === this.currentIndex ||
+					this.randomSongList.includes(randomIndex)) {
+						randomIndex = Math.floor(Math.random() * this.songs.length)
+				}
+				
+				this.randomSongList.push(randomIndex)
+				this.currentIndex = randomIndex
+				this.loadCurrentSong()
+			},
+			scrollToActiveSong() {
+				setTimeout(() => {
+					if (this.currentIndex === 0) {
+						$('.song--active').scrollIntoView({
+							behavior: 'smooth',
+							block: 'center',
+						})
+					} else {
+						$('.song--active').scrollIntoView({
+							behavior: 'smooth',
+							block: 'nearest',
+						})
+					}
+				}, 300)
+			},
+			handleEvents() {
+				const cdWidth = cdThumb.clientWidth
+
+				window.onscroll = () => {
+					const scrollY = window.scrollY || document.documentElement.scrollTop
+					const newCdWidth = cdWidth - scrollY
+
+					cd.style.width = newCdWidth > 0 ? newCdWidth + 'px' : 0
+				}
+
+				btnPlay.onclick = () => {
+					if (this.isPlaying) {
+						audio.pause()
+					} else {
+						audio.play()
+					}
+				}
+
+				audio.onplay = () => {
+					this.isPlaying = true
+					player.classList.add('player--playing')
+					cdAnimated.play()
+				}
+
+				audio.onpause = () => {
+					this.isPlaying = false
+					player.classList.remove('player--playing')
+					cdAnimated.pause()
+				}
+
+				audio.ontimeupdate = () => {
+					const progress = Math.floor(audio.currentTime / audio.duration * 100) || 0
+
+					progressBar.value = progress
+				}
+
+				progressBar.onchange = () => {
+					const time = audio.duration * progressBar.value / 100
+
+					audio.currentTime = time
+				}
+
+				btnNext.onclick = () => {
+					if (this.isRandom)
+						this.randomSong()
+					else
+						this.nextSong()
+					audio.play()
+					this.scrollToActiveSong()
+				}
+				
+				btnPrev.onclick = () => {
+					if (this.isRandom)
+						this.randomSong()
+					else
+						this.prevSong()
+					audio.play()
+					this.scrollToActiveSong()
+				}
+
+				btnRandom.onclick = () => {
+					this.isRandom = !this.isRandom
+					btnRandom.classList.toggle('btn--active', this.isRandom)
+					this.setConfig('isRandom', this.isRandom)
+				}
+				
+				btnRepeat.onclick = () => {
+					this.isRepeat = !this.isRepeat
+					btnRepeat.classList.toggle('btn--active', this.isRepeat)
+					this.setConfig('isRepeat', this.isRepeat)
+				}
+
+				audio.onended = () => {
+					if (this.isRepeat)
+						audio.play()
+					else
+						btnNext.click()
+				}
+
+				playlist.onclick = (e) => {
+					const song = e.target.closest('.song:not(.song--active)')
+					const songOption = e.target.closest('.song__option')
+
+					if (song || songOption) {
+						if (song && !songOption) {
+							this.currentIndex = song.dataset.id
+							this.loadCurrentSong()
+							audio.play()
+						} else {
+							console.log('option')
+						}
+					}
+				}
+			},
+			handleAnimations() {
+				cdAnimated = cdThumb.animate([{
+					transform: 'rotate(360deg)',
+				}], {
+					duration: 10000,
+					iterations: Infinity,
+				})
+
+				cdAnimated.pause()
+			},
+			start() {
+				this.loadConfig()
+				this.render()
+				this.defineProperties()
+				this.loadCurrentSong()
+				this.handleAnimations()
+				this.handleEvents()
+			}
+		}
+
+		app.start()
+	</script>
+</body>
+
+</html>
